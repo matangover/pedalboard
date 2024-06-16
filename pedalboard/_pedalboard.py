@@ -184,6 +184,17 @@ def wrap_type(base_type):
                 return super().__getattr__(name)
             raise AttributeError("'{}' has no attribute '{}'".format(base_type.__name__, name))
 
+        def __setattr__(self, name, value):
+            if name == "_wrapped":
+                return super().__setattr__(name, value)
+
+            wrapped = self._wrapped()
+            if hasattr(wrapped, name):
+                return setattr(wrapped, name, value)
+
+            return super().__setattr__(name, value)
+
+
         def __dir__(self) -> Iterable[str]:
             wrapped = self._wrapped()
             if wrapped:
@@ -281,39 +292,40 @@ class AudioProcessorParameter(object):
         on [0, 1] and is passed directly to the underlying plugin object.
     """
 
-    def __init__(self, plugin: "ExternalPlugin", parameter_name: str, search_steps: int = 1000):
+    def __init__(self, plugin: "ExternalPlugin", parameter_name: str, search_steps: int = 1000, guess_ranges: bool = True):
         self.__plugin = plugin
         self.__parameter_name = parameter_name
 
         self.ranges: Dict[Tuple[float, float], Union[str, float, bool]] = {}
 
         with self.__get_cpp_parameter() as cpp_parameter:
-            for fetch_slow in (False, True):
-                start_of_range: float = 0
-                text_value: Optional[str] = None
+            if guess_ranges:
+                for fetch_slow in (False, True):
+                    start_of_range: float = 0
+                    text_value: Optional[str] = None
 
-                self.ranges = {}
-                for x in range(0, search_steps + 1):
-                    raw_value = x / search_steps
-                    x_text_value = get_text_for_raw_value(cpp_parameter, raw_value, fetch_slow)
-                    if text_value is None:
-                        text_value = x_text_value
-                    elif x_text_value != text_value:
-                        # End current range and start a new one
-                        self.ranges[(start_of_range, raw_value)] = text_value
-                        text_value = x_text_value
-                        start_of_range = raw_value
-                results_look_incorrect = not self.ranges or (
-                    len(self.ranges) == 1 and all(looks_like_float(v) for v in self.ranges.values())
-                )
-                if not results_look_incorrect:
-                    break
-            if text_value is None:
-                raise NotImplementedError(
-                    f"Plugin parameter '{parameter_name}' failed to return a valid string for its"
-                    " value."
-                )
-            self.ranges[(start_of_range, 1)] = text_value
+                    self.ranges = {}
+                    for x in range(0, search_steps + 1):
+                        raw_value = x / search_steps
+                        x_text_value = get_text_for_raw_value(cpp_parameter, raw_value, fetch_slow)
+                        if text_value is None:
+                            text_value = x_text_value
+                        elif x_text_value != text_value:
+                            # End current range and start a new one
+                            self.ranges[(start_of_range, raw_value)] = text_value
+                            text_value = x_text_value
+                            start_of_range = raw_value
+                    results_look_incorrect = not self.ranges or (
+                        len(self.ranges) == 1 and all(looks_like_float(v) for v in self.ranges.values())
+                    )
+                    if not results_look_incorrect:
+                        break
+                if text_value is None:
+                    raise NotImplementedError(
+                        f"Plugin parameter '{parameter_name}' failed to return a valid string for its"
+                        " value."
+                    )
+                self.ranges[(start_of_range, 1)] = text_value
 
             self.python_name = to_python_parameter_name(cpp_parameter)
 
@@ -323,7 +335,7 @@ class AudioProcessorParameter(object):
         self.approximate_step_size = None
         self.type: Type = str
 
-        if all(looks_like_float(v) for v in self.ranges.values()):
+        if self.ranges and all(looks_like_float(v) for v in self.ranges.values()):
             self.type = float
             float_ranges = {
                 k: float(strip_common_float_suffixes(v)) for k, v in self.ranges.items()
@@ -619,6 +631,9 @@ def normalize_python_parameter_name(name: str) -> str:
     return name
 
 
+guess_parameter_ranges = True
+
+
 class _PythonExternalPluginMixin:
     def __set_initial_parameter_values__(
         self, parameter_values: Optional[Dict[str, Union[str, int, float, bool]]]
@@ -659,7 +674,7 @@ class _PythonExternalPluginMixin:
                 continue
             if cpp_parameter.name not in self.__python_parameter_cache__:
                 self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
-                    self, cpp_parameter.name
+                    self, cpp_parameter.name, guess_ranges=guess_parameter_ranges
                 )
             parameter = self.__python_parameter_cache__[cpp_parameter.name]
             if parameter.python_name:
@@ -683,7 +698,7 @@ class _PythonExternalPluginMixin:
 
         if cpp_parameter.name not in self.__python_parameter_cache__:
             self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
-                cast(ExternalPlugin, self), cpp_parameter.name
+                cast(ExternalPlugin, self), cpp_parameter.name, guess_ranges=guess_parameter_ranges
             )
         return self.__python_parameter_cache__[cpp_parameter.name]
 
