@@ -24,7 +24,8 @@ def patch_overload(func):
             func.__doc__ = docstring[len(docstring) // 2 :].strip()
     return func
 
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
@@ -141,35 +142,21 @@ class AudioFile:
         those classes below for documentation.
     """
 
-    @classmethod
+    @staticmethod
     @typing.overload
-    def __new__(cls, filename: str, mode: Literal["r"] = "r") -> ReadableAudioFile:
+    def __new__(
+        cls: object, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"] = "r"
+    ) -> ReadableAudioFile:
         """
         Open an audio file for reading.
 
         Open a file-like object for reading. The provided object must have ``read``, ``seek``, ``tell``, and ``seekable`` methods, and must return binary data (i.e.: ``open(..., "w")`` or ``io.BytesIO``, etc.).
         """
 
-    @classmethod
+    @staticmethod
     @typing.overload
     def __new__(
-        cls, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"] = "r"
-    ) -> ReadableAudioFile: ...
-    @classmethod
-    @typing.overload
-    def __new__(
-        cls,
-        filename: str,
-        mode: Literal["w"],
-        samplerate: typing.Optional[float] = None,
-        num_channels: int = 1,
-        bit_depth: int = 16,
-        quality: typing.Optional[typing.Union[str, float]] = None,
-    ) -> WriteableAudioFile: ...
-    @classmethod
-    @typing.overload
-    def __new__(
-        cls,
+        cls: object,
         file_like: typing.BinaryIO,
         mode: Literal["w"],
         samplerate: typing.Optional[float] = None,
@@ -177,6 +164,20 @@ class AudioFile:
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
+    ) -> WriteableAudioFile: ...
+    @staticmethod
+    @typing.overload
+    def __new__(cls: object, filename: str, mode: Literal["r"] = "r") -> ReadableAudioFile: ...
+    @staticmethod
+    @typing.overload
+    def __new__(
+        cls: object,
+        filename: str,
+        mode: Literal["w"],
+        samplerate: typing.Optional[float] = None,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
     ) -> WriteableAudioFile: ...
     @staticmethod
     def encode(
@@ -427,8 +428,8 @@ class AudioStream:
 
 
         """
-    default_input_device_name: Optional[str] = None
-    default_output_device_name: Optional[str] = None
+    default_input_device_name: typing.Optional[str] = None
+    default_output_device_name: typing.Optional[str] = None
     input_device_names: typing.List[str] = []
     output_device_names: typing.List[str] = []
     pass
@@ -473,16 +474,15 @@ class ReadableAudioFile(AudioFile):
         Stop using this :class:`ReadableAudioFile` as a context manager, close the file, release its resources.
         """
 
+    def __init__(self, *args, **kwargs) -> None: ...
+    @staticmethod
     @typing.overload
-    def __init__(self, filename: str) -> None: ...
+    def __new__(
+        cls: object, file_like: typing.Union[typing.BinaryIO, memoryview]
+    ) -> ReadableAudioFile: ...
+    @staticmethod
     @typing.overload
-    def __init__(self, file_like: typing.BinaryIO) -> None: ...
-    @classmethod
-    @typing.overload
-    def __new__(cls, filename: str) -> ReadableAudioFile: ...
-    @classmethod
-    @typing.overload
-    def __new__(cls, file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile: ...
+    def __new__(cls: object, filename: str) -> ReadableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
         """
@@ -747,9 +747,9 @@ class ResampledReadableAudioFile(AudioFile):
         target_sample_rate: float,
         resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
     ) -> None: ...
-    @classmethod
+    @staticmethod
     def __new__(
-        cls,
+        cls: object,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
         resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
@@ -1034,45 +1034,27 @@ class WriteableAudioFile(AudioFile):
 
     def __enter__(self) -> WriteableAudioFile: ...
     def __exit__(self, arg0: object, arg1: object, arg2: object) -> None: ...
-    @typing.overload
-    def __init__(
-        self,
-        filename: str,
-        samplerate: float,
-        num_channels: int = 1,
-        bit_depth: int = 16,
-        quality: typing.Optional[typing.Union[str, float]] = None,
-    ) -> None: ...
-    @typing.overload
-    def __init__(
-        self,
-        file_like: typing.BinaryIO,
-        samplerate: float,
-        num_channels: int = 1,
-        bit_depth: int = 16,
-        quality: typing.Optional[typing.Union[str, float]] = None,
-        format: typing.Optional[str] = None,
-    ) -> None: ...
-    @classmethod
+    def __init__(self, *args, **kwargs) -> None: ...
+    @staticmethod
     @typing.overload
     def __new__(
-        cls,
-        filename: str,
+        cls: object,
+        file_like: typing.BinaryIO,
         samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        format: typing.Optional[str] = None,
     ) -> WriteableAudioFile: ...
-    @classmethod
+    @staticmethod
     @typing.overload
     def __new__(
-        cls,
-        file_like: typing.BinaryIO,
+        cls: object,
+        filename: str,
         samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
-        format: typing.Optional[str] = None,
     ) -> WriteableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:

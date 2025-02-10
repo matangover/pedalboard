@@ -24,7 +24,8 @@ def patch_overload(func):
             func.__doc__ = docstring[len(docstring) // 2 :].strip()
     return func
 
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
@@ -404,8 +405,10 @@ class ExternalPlugin(Plugin):
     @typing.overload
     def __call__(
         self,
-        input_array: numpy.ndarray,
+        midi_messages: object,
+        duration: float,
         sample_rate: float,
+        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
@@ -418,10 +421,8 @@ class ExternalPlugin(Plugin):
     @typing.overload
     def __call__(
         self,
-        midi_messages: object,
-        duration: float,
+        input_array: numpy.ndarray,
         sample_rate: float,
-        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
@@ -1062,8 +1063,10 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def __call__(
         self,
-        input_array: numpy.ndarray,
+        midi_messages: object,
+        duration: float,
         sample_rate: float,
+        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
@@ -1076,10 +1079,8 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def __call__(
         self,
-        midi_messages: object,
-        duration: float,
+        input_array: numpy.ndarray,
         sample_rate: float,
-        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
@@ -1103,8 +1104,10 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        input_array: numpy.ndarray,
+        midi_messages: object,
+        duration: float,
         sample_rate: float,
+        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
@@ -1280,10 +1283,8 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        midi_messages: object,
-        duration: float,
+        input_array: numpy.ndarray,
         sample_rate: float,
-        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...

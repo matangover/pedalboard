@@ -788,20 +788,12 @@ inline void init_readable_audio_file(
     py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
         &pyReadableAudioFile) {
   pyReadableAudioFile
-      .def(py::init([](std::string filename) -> ReadableAudioFile * {
+      .def(py::init([](py::args args, const py::kwargs& kwargs) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
-           }),
-           py::arg("filename"))
-      .def(py::init([](py::object filelike) -> ReadableAudioFile * {
-             // This definition is only here to provide nice docstrings.
-             throw std::runtime_error(
-                 "Internal error: __init__ should never be called, as this "
-                 "class implements __new__.");
-           }),
-           py::arg("file_like"))
+           }))
       .def_static(
           "__new__",
           [](const py::object *, std::string filename) {

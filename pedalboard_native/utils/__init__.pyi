@@ -20,7 +20,8 @@ def patch_overload(func):
             func.__doc__ = docstring[len(docstring) // 2 :].strip()
     return func
 
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum

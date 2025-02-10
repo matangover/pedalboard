@@ -19,7 +19,6 @@ from typing import Dict, List
 
 import black
 import mypy.stubtest
-import psutil
 import sphinx.ext.autodoc.importer
 from mypy.stubtest import parse_options as mypy_parse_options
 from mypy.stubtest import test_stubs
@@ -87,11 +86,11 @@ REPLACEMENTS = [
     ),
     (
         r"default_input_device_name = [\"'].*?[\"']",
-        "default_input_device_name: Optional[str] = None",
+        "default_input_device_name: typing.Optional[str] = None",
     ),
     (
         r"default_output_device_name = [\"'].*?[\"']",
-        "default_output_device_name: Optional[str] = None",
+        "default_output_device_name: typing.Optional[str] = None",
     ),
     # None of our enums are properly detected by pybind11-stubgen. These are brittle hacks:
     (r"0, quality: Resample\.Quality", "0, quality: Quality"),
@@ -148,8 +147,8 @@ def patch_overload(func):
         if docstring[len(docstring) // 2:].strip() == docstring[:-len(docstring) // 2].strip():
             func.__doc__ = docstring[len(docstring) // 2:].strip()
     return func
-
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    typing.overload = patch_overload
     """,
     ),
 ]
@@ -576,7 +575,7 @@ def main():
         # Re-run this same script in a fresh interpreter, but with skip_regenerating_type_hints
         # enabled:
         subprocess.check_call(
-            [psutil.Process(os.getpid()).exe()] + sys.argv + ["--skip-regenerating-type-hints"]
+            [sys.executable] + sys.argv + ["--skip-regenerating-type-hints"]
         )
         return
 
