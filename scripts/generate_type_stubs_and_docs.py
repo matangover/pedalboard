@@ -54,6 +54,9 @@ MULTILINE_REPLACEMENTS = [
         r"output_device_names = \[[^]]*\]\n",
         "output_device_names: typing.List[str] = []\n",
     ),
+    # MyPy chokes on classes that contain both __new__ and __init__.
+    # Remove all bare, arg-free inits, unless they are overloaded:
+    (r"(?<!overload)\n\s*def __init__\(self\) -> None: \.\.\.", "\n"),
 ]
 
 REPLACEMENTS = [
@@ -113,9 +116,6 @@ REPLACEMENTS = [
     (r'.*"ExternalPluginReloadType",.*', ""),
     # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
     (r".*?:type:.*$", ""),
-    # MyPy chokes on classes that contain both __new__ and __init__.
-    # Remove all bare, arg-free inits:
-    (r"def __init__\(self\) -> None: ...", ""),
     # Sphinx gets confused when inheriting twice from the same base class:
     (r"\(ExternalPlugin, Plugin\)", "(ExternalPlugin)"),
     # Python <3.9 doesn't like bare lists in type hints:
